@@ -2,14 +2,9 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# Carregando os dados
+# ------------------- Leitura dos Dados -------------------
 data = pd.read_csv('dados.csv', sep=';', encoding='latin1', dtype=str)
 
-# Verificando valores nulos
-print("Valores nulos por coluna:")
-print(data.isnull().sum())
-
-# Limpando dados (removendo valores nulos)
 data_clean = data.dropna().copy()
 
 # Convertendo colunas para valores numéricos
@@ -87,29 +82,66 @@ escola_map = {
 
 data_clean.loc[:, 'Tipo_Escola'] = data_clean['TP_ESCOLA'].map(escola_map)
 
-# ------------------- Análises Estatísticas -------------------
+# ------------------- Tratamento de Outliers -------------------
 
-# Estatísticas gerais de notas de Ciências Humanas
-print("\nEstatísticas Gerais - Notas de Ciências Humanas:")
-print(data_clean['NU_NOTA_CH'].describe())
+# Identificando outliers para a coluna de notas de Ciências Humanas
+Q1 = data_clean['NU_NOTA_CH'].quantile(0.25)
+Q3 = data_clean['NU_NOTA_CH'].quantile(0.75)
+IQR = Q3 - Q1
+
+# Calculando limites inferior e superior
+limite_inferior = Q1 - 1.5 * IQR
+limite_superior = Q3 + 1.5 * IQR
+
+print(f"Limite inferior: {limite_inferior}, Limite superior: {limite_superior}")
+
+# Removendo valores atípicos fora dos limites
+data_clean = data_clean[(data_clean['NU_NOTA_CH'] >= limite_inferior) & (data_clean['NU_NOTA_CH'] <= limite_superior)]
+
+# ------------------- Estatísticas Detalhadas -------------------
 
 # Estatísticas por faixa etária
 print("\nEstatísticas por Faixa Etária Categorizada:")
 print(data_clean.groupby('Faixa_Etaria_Categorizada')['NU_NOTA_CH'].describe())
 
-# Estatísticas por renda familiar
-print("\nEstatísticas por Renda Familiar:")
-print(data_clean.groupby('Renda_Familiar')['NU_NOTA_CH'].describe())
-
 # Estatísticas por tipo de escola
 print("\nEstatísticas por Tipo de Escola:")
 print(data_clean.groupby('Tipo_Escola')['NU_NOTA_CH'].describe())
 
+# ------------------- Cálculo da Correlação -------------------
+
+# Mapeando faixas de renda para valores numéricos
+renda_ordinal = {
+    'Nenhuma renda': 0,
+    'Até 1.320': 1,
+    'De 1.320,01 até 1.980': 2,
+    'De 1.980,01 até 2.640': 3,
+    'De 2.640,01 até 3.300': 4,
+    'De 3.300,01 até 3.960': 5,
+    'De 3.960,01 até 5.280': 6,
+    'De 5.280,01 até 6.600': 7,
+    'De 6.600,01 até 7.920': 8,
+    'De 7.920,01 até 9.240': 9,
+    'De 9.240,01 até 10.560': 10,
+    'De 10.560,01 até 11.880': 11,
+    'De 11.880,01 até 13.200': 12,
+    'De 13.200,01 até 15.840': 13,
+    'De 15.840,01 até 19.800': 14,
+    'De 19.800,01 até 26.400': 15,
+    'Acima de 26.400': 16
+}
+data_clean['Renda_Ordinal'] = data_clean['Renda_Familiar'].map(renda_ordinal)
+
+# Calculando correlação
+correlacao = data_clean[['Renda_Ordinal', 'NU_NOTA_CH']].corr()
+print("Correlação entre Renda e Notas de Ciências Humanas:")
+print(correlacao)
+
 # ------------------- Gráficos -------------------
 
 plt.figure(figsize=(10, 6))
-sns.histplot(data_clean['NU_NOTA_CH'], kde=True, bins=30, color='blue')
-plt.title('Distribuição das Notas de Ciências Humanas')
+sns.histplot(data_clean['NU_NOTA_CH'], kde=True, bins=30, color='green')
+plt.title('Distribuição das Notas de Ciências Humanas (Após Tratamento de Outliers)')
 plt.xlabel('Nota de Ciências Humanas')
 plt.ylabel('Frequência')
 plt.show()
@@ -136,10 +168,11 @@ plt.ylabel('Frequência')
 plt.xticks(rotation=45)
 plt.show()
 
+# Plot do Tipo de Escola
 plt.figure(figsize=(12, 6))
 sns.histplot(data=data_clean, x='NU_NOTA_CH', hue='Tipo_Escola', multiple="stack", palette="viridis", bins=30)
-plt.title('Distribuição das Notas de Ciências Humanas por Tipo de Escola')
+plt.title('Distribuição das Notas de Ciências Humanas por Tipo de Escola')  # Título completo
 plt.xlabel('Nota de Ciências Humanas')
 plt.ylabel('Frequência')
-plt.xticks(rotation=45)
+plt.xticks(rotation=45)  # Rotaciona os rótulos no eixo X para melhor visualização
 plt.show()
